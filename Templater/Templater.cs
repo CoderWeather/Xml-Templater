@@ -246,7 +246,7 @@ public static class Templater {
         }
 
         if (anyIterations is false) {
-            if (ParseHelper.ParseToNextInlineBlock(template, out var index, out var length, out var type) is false) {
+            if (ParseHelper.ParseToNextInlineBlock(template, out _, out _, out var type) is false) {
                 return false;
             }
 

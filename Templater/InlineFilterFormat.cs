@@ -25,9 +25,6 @@ public static class InlineFilterFormat {
         return true;
     }
 
-    // current support only for one filter without any parameters which can be applied as the function parameters
-    // currently: {{<value> | filter}}
-    // can be: {{<value> | filter(F2)
     static bool ApplyFilter(ReadOnlySpan<char> input, ReadOnlySpan<char> filter, out string result) {
         switch (filter) {
             case "price": {
@@ -63,7 +60,7 @@ public static class InlineFilterFormat {
             return false;
         }
 
-        result = d.ToString("C", CultureInfo.InvariantCulture);
+        result = d.ToString("F2", CultureInfo.InvariantCulture);
         return true;
     }
 
