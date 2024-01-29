@@ -1,5 +1,4 @@
 ﻿using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Running;
 
 const string template = """
     <ul id="products">
@@ -50,34 +49,7 @@ public class Bench {
             {% for product in products %}
             <li>
                 <h2>{{product.name}}</h2>
-                <h2>{{product.name}}</h2>
-                <h2>{{product.name}}</h2>
-                <h2>{{product.name}}</h2>
-                <h2>{{product.name}}</h2>
-                <h2>{{product.name}}</h2>
-                <h2>{{product.name}}</h2>
-                <h2>{{product.name}}</h2>
-                <h2>{{product.name}}</h2>
                 Only {{product.price | price }}
-                Only {{product.price | price }}
-                Only {{product.price | price }}
-                Only {{product.price | price }}
-                Only {{product.price | price }}
-                Only {{product.price | price }}
-                Only {{product.price | price }}
-                Only {{product.price | price }}
-                Only {{product.price | price }}
-                Only {{product.price | price }}
-                {{product.description | paragraph }}
-                {{product.description | paragraph }}
-                {{product.description | paragraph }}
-                {{product.description | paragraph }}
-                {{product.description | paragraph }}
-                {{product.description | paragraph }}
-                {{product.description | paragraph }}
-                {{product.description | paragraph }}
-                {{product.description | paragraph }}
-                {{product.description | paragraph }}
                 {{product.description | paragraph }}
             </li>
             {% endfor %}
