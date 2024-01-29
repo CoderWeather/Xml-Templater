@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using Templater.Core;
 
 namespace Templater;
 
@@ -63,31 +62,79 @@ public static class Templater {
     };
 
     public static string CreateHtml(string template, string jsonData) {
-        // var validation = ParseHelper.ValidateTemplate(template);
-        // if (validation is false) {
-        //     throw new TemplateFormatException("Invalid template.");
-        // }
-
         using var dataDoc = JsonDocument.Parse(jsonData, JsonDocumentOptions);
         var obj = dataDoc.RootElement;
         var sb = new StringBuilder();
-        var t = template.AsSpan();
 
+        if (Processing(template.AsSpan(), obj, sb) is false) {
+            return default!;
+        }
 
-        return "";
+        return sb.ToString();
     }
 
-    static bool BlockProcessing(ReadOnlySpan<char> template, JsonElement json, StringBuilder sb, out int offset) {
+    static bool Processing(ReadOnlySpan<char> template, JsonElement rootObject, StringBuilder sb) {
         var t = template;
-        offset = 0;
+
         while (t.Length > 0) {
-            if (ParseHelper.ParseToNextInlineBlock(template, out var index, out var length, out var type) is false) {
+            if (ParseHelper.ParseToNextInlineBlock(t, out var index, out var length, out var type) is false) {
                 break;
             }
 
+            var offset = 0;
 
-            offset += index;
-            t = t[index..];
+            switch (type) {
+                case InlineEntryType.FromObject: {
+                    var spanToWrite = t[..index];
+                    sb.Append(spanToWrite);
+                    var inlineValue = t[index..(index + length)].Trim(" {}");
+                    if (ProcessInlineEntry(inlineValue, rootObject, true, out var formattedValue) is false) {
+                        return false;
+                    }
+
+                    sb.Append(formattedValue);
+                    offset = index + length;
+                    break;
+                }
+                case InlineEntryType.ForStart: {
+                    var prevLineEndIndex = ParseHelper.IndexOfPrevEndOfLine(t, index);
+                    var spanToWrite = t[..prevLineEndIndex];
+                    sb.Append(spanToWrite);
+                    var inlineValue = t[index..(index + length)].Trim(" {}%");
+                    if (ParseHelper.ExtractNamesFromForStart(inlineValue, out var innerEnumerationObjectName, out var collectionPath) is false) {
+                        return false;
+                    }
+
+                    if (ParseHelper.ExtractJsonValueFromPropertiesPath(collectionPath, rootObject, true, out var innerJsonArray) is false) {
+                        return false;
+                    }
+
+                    var startOfNextLine = ParseHelper.IndexOfNextStartOfLine(t, index);
+                    if (startOfNextLine is -1) {
+                        throw new TemplateFormatException("Unexpected end of file.");
+                    }
+
+                    offset += startOfNextLine;
+
+                    if (BlockForProcessing(t[startOfNextLine..], innerEnumerationObjectName, rootObject, innerJsonArray, sb,
+                            out var innerOffset) is false) {
+                        return false;
+                    }
+
+                    offset += innerOffset;
+                    break;
+                }
+                case InlineEntryType.ForEnd:
+                    throw new TemplateFormatException("Unexpected inline entry.");
+                case InlineEntryType.EndOfFile: {
+                    sb.Append(t);
+                    return true;
+                }
+                case InlineEntryType.Undefined:
+                    throw new TemplateFormatException("Unexpected end of file.");
+            }
+
+            t = t[offset..];
         }
 
         return true;
@@ -96,15 +143,20 @@ public static class Templater {
     static bool BlockForProcessing(
         ReadOnlySpan<char> template,
         ReadOnlySpan<char> enumerationObjectName,
-        JsonDataContextStack jsonDataContextStack,
+        JsonElement rootObject,
         JsonElement jsonArray,
         StringBuilder sb,
         out int offset
     ) {
+        var anyIterations = false;
         offset = 0;
         foreach (var el in jsonArray.EnumerateArray()) {
+            offset = 0;
+            anyIterations = true;
             var t = template;
+            var iterationEnd = false;
             while (true) {
+                var iterationOffset = 0;
                 if (ParseHelper.ParseToNextInlineBlock(t, out var index, out var length, out var type) is false) {
                     return false;
                 }
@@ -120,12 +172,13 @@ public static class Templater {
                                 return false;
                             }
                         } else {
-                            //
+                            if (ProcessInlineEntry(inlineValue, rootObject, true, out formattedValue) is false) {
+                                return false;
+                            }
                         }
 
                         sb.Append(formattedValue);
-                        t = t[(index + length)..];
-                        offset += index + length;
+                        iterationOffset += index + length;
                         break;
                     }
                     case InlineEntryType.ForStart: {
@@ -137,8 +190,15 @@ public static class Templater {
                             return false;
                         }
 
-                        if (ParseHelper.ExtractJsonValueFromPropertiesPath(collectionPath, el, true, out var innerJsonArray) is false) {
-                            return false;
+                        JsonElement innerJsonArray;
+                        if (collectionPath.StartsWith(enumerationObjectName)) {
+                            if (ParseHelper.ExtractJsonValueFromPropertiesPath(collectionPath, el, true, out innerJsonArray) is false) {
+                                return false;
+                            }
+                        } else {
+                            if (ParseHelper.ExtractJsonValueFromPropertiesPath(collectionPath, rootObject, true, out innerJsonArray) is false) {
+                                return false;
+                            }
                         }
 
                         var startOfNextLine = ParseHelper.IndexOfNextStartOfLine(t, index);
@@ -146,19 +206,14 @@ public static class Templater {
                             throw new TemplateFormatException("Unexpected end of file.");
                         }
 
-                        using var innerJsonDataContextStack = jsonDataContextStack.Push(el);
-                        if (BlockForProcessing(
-                                t[startOfNextLine..],
-                                innerEnumerationObjectName,
-                                innerJsonDataContextStack,
-                                innerJsonArray,
-                                sb,
-                                out var innerOffset) is false
-                           ) {
+                        iterationOffset += startOfNextLine;
+
+                        if (BlockForProcessing(t[startOfNextLine..], innerEnumerationObjectName, rootObject, innerJsonArray, sb,
+                                out var innerOffset) is false) {
                             return false;
                         }
 
-                        offset += innerOffset;
+                        iterationOffset += innerOffset;
 
                         break;
                     }
@@ -166,18 +221,41 @@ public static class Templater {
                         var prevLineEndIndex = ParseHelper.IndexOfPrevEndOfLine(t, index);
                         var spanToWrite = t[..prevLineEndIndex];
                         sb.Append(spanToWrite);
-                        return true;
+                        var startOfNextLine = ParseHelper.IndexOfNextStartOfLine(t, index);
+                        if (startOfNextLine is -1) {
+                            // add to offset length of the rest of the template
+                            iterationOffset += t.Length;
+                            iterationEnd = true;
+                            break;
+                        }
+
+                        iterationOffset += startOfNextLine;
+                        iterationEnd = true;
+                        break;
                     }
                     case InlineEntryType.EndOfFile or InlineEntryType.Undefined:
                         throw new TemplateFormatException("Unexpected end of file.");
                 }
 
-                offset += index;
-                t = t[index..];
+                t = t[iterationOffset..];
+                offset += iterationOffset;
+                if (iterationEnd) {
+                    break;
+                }
             }
         }
 
-        return false;
+        if (anyIterations is false) {
+            if (ParseHelper.ParseToNextInlineBlock(template, out var index, out var length, out var type) is false) {
+                return false;
+            }
+
+            if (type is not InlineEntryType.ForEnd) {
+                throw new TemplateFormatException("Unexpected inline entry.");
+            }
+        }
+
+        return true;
     }
 
     static bool ProcessInlineEntry(ReadOnlySpan<char> input, JsonElement dataObj, bool contextOpen, out string result) {
@@ -186,10 +264,10 @@ public static class Templater {
         ReadOnlySpan<char> filter = default;
         ReadOnlySpan<char> propertiesPath;
         if (anyFilterIndex > -1) {
-            filter = t[(anyFilterIndex + 1)..].Trim();
-            propertiesPath = t[..anyFilterIndex];
+            filter = t[(anyFilterIndex + 1)..].TrimStart();
+            propertiesPath = t[..anyFilterIndex].TrimEnd();
         } else {
-            propertiesPath = t.TrimEnd();
+            propertiesPath = t;
         }
 
         if (ParseHelper.ExtractJsonValueFromPropertiesPath(propertiesPath, dataObj, contextOpen, out var jsonProperty) is false) {
@@ -198,20 +276,5 @@ public static class Templater {
         }
 
         return InlineFilterFormat.FormatValue(jsonProperty, filter, out result);
-    }
-
-    static bool TryGetJsonPropertyFromOpenedContext(
-        this JsonDataContextStack openedJsonDataContext,
-        ReadOnlySpan<char> propertyName,
-        out JsonElement property
-    ) {
-        foreach (var el in openedJsonDataContext) {
-            if (el.TryGetProperty(propertyName, out property)) {
-                return true;
-            }
-        }
-
-        property = default;
-        return true;
     }
 }

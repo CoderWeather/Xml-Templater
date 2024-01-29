@@ -8,18 +8,10 @@ namespace Templater;
 public static class InlineFilterFormat {
     public static bool FormatValue(JsonElement jsonValue, ReadOnlySpan<char> filter, out string result) {
         var valueByteLength = jsonValue.GetByteLength();
-        char[] buffer = null!;
-        try {
-            buffer = ArrayPool<char>.Shared.Rent(valueByteLength);
-            var writtenChars = jsonValue.WriteTo(buffer.AsSpan());
-            var resultValue = buffer.AsSpan()[..writtenChars];
-            result = resultValue.ToString();
-        }
-        finally {
-            if (buffer != null!) {
-                ArrayPool<char>.Shared.Return(buffer);
-            }
-        }
+        using var buffer = ArrayPool<char>.Shared.RentStruct(valueByteLength);
+        var writtenChars = jsonValue.WriteTo(buffer.Span);
+        var resultValue = buffer.Span[..writtenChars];
+        result = resultValue.ToString();
 
         if (filter != default) {
             if (ApplyFilter(result, filter, out var filteredResult) is false) {

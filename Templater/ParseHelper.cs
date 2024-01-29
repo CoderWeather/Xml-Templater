@@ -101,26 +101,20 @@ public static partial class ParseHelper {
     ) {
         var t = propertiesPath;
         var json = jsonData;
-        var offset = t.IndexOf('.');
-        if (offset is -1) {
-            result = jsonData;
-            return true;
-        }
 
         if (contextOpen is false) {
-            var objectName = t[..offset];
-            if (json.TryGetProperty(objectName, out var property) is false) {
+            var dotIndex = t.IndexOf('.');
+            if (dotIndex is -1) {
                 result = default;
                 return false;
             }
 
-            json = property;
-            t = t[(offset + 1)..];
+            t = t[(dotIndex + 1)..];
         }
 
         while (t.Length > 0) {
-            offset = t.IndexOf('.');
-            if (offset is -1) {
+            var dotIndex = t.IndexOf('.');
+            if (dotIndex is -1) {
                 if (json.TryGetProperty(t, out var property) is false) {
                     result = default;
                     return false;
@@ -130,14 +124,14 @@ public static partial class ParseHelper {
                 return true;
             }
 
-            var objectName = t[..offset];
+            var objectName = t[..dotIndex];
             if (json.TryGetProperty(objectName, out var property1) is false) {
                 result = default;
                 return false;
             }
 
             json = property1;
-            t = t[(offset + 1)..];
+            t = t[(dotIndex + 1)..];
         }
 
         result = default;
@@ -220,7 +214,7 @@ public static partial class ParseHelper {
     public static int IndexOfNextStartOfLine(ReadOnlySpan<char> input, int currentIndex) {
         var t = input[currentIndex..];
         var index = t.IndexOfAny(NewLineChars);
-        var newlineIndex = input[index..].IndexOfAnyExcept(NewLineChars);
-        return newlineIndex + index;
+        var newlineIndex = t[index..].IndexOfAnyExcept(NewLineChars);
+        return currentIndex + index + newlineIndex;
     }
 }

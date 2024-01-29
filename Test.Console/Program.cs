@@ -19,38 +19,41 @@ using Templater;
 using Templater.Core;
 using Test.Console;
 
-// const string template = """
-//     <ul id="products">
-//         {% for product in products %}
-//         <li>
-//             <h2>{{product.name}}</h2>
-//             Only {{product.price | price }}
-//             {{product.description | paragraph }}
-//         </li>
-//         {% endfor %}
-//     </ul>
-//     """;
-// var json = """
-//     {
-//       "products": [
-//         {
-//           "name": "Apple",
-//           "price": 329,
-//           "description": "flat-out fun"
-//         },
-//         {
-//           "name": "Orange",
-//           "price": 25,
-//           "description": "colorful"
-//         },
-//         {
-//           "name": "Banana",
-//           "price": 99,
-//           "description": "peel it"
-//         }
-//       ]
-//     }
-//     """;
+const string template = """
+    <ul id="products">
+        {% for product in products %}
+        <li>
+            <h2>{{product.name}}</h2>
+            Only {{product.price | price }}
+            {{product.description | paragraph }}
+        </li>
+        {% endfor %}
+    </ul>
+    """;
+const string json = """
+    {
+      "products": [
+        {
+          "name": "Apple",
+          "price": 329,
+          "description": "flat-out fun"
+        },
+        {
+          "name": "Orange",
+          "price": 25,
+          "description": "colorful"
+        },
+        {
+          "name": "Banana",
+          "price": 99,
+          "description": "peel it"
+        }
+      ]
+    }
+    """;
+
+var result = Templater.Templater.CreateHtml(template, json);
+Console.WriteLine(result);
 
 // var r1 = ParseHelper.ValidateTemplate(template);
 // _ = r1;
@@ -58,6 +61,6 @@ using Test.Console;
 // b.Setup();
 // var r = b.ValidateTemplate();
 // Console.WriteLine($"result: {r}");
-BenchmarkRunner.Run<Bench>();
+// BenchmarkRunner.Run<Bench>();
 
 // Console.WriteLine();
