@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AssemblyName>Templater</AssemblyName>
+        <RootNamespace>$(AssemblyName)</RootNamespace>
+        <WarningsAsErrors>nullable,0618,0612</WarningsAsErrors>
+    </PropertyGroup>
+
+</Project>
