@@ -5,7 +5,7 @@ using Templater.Core;
 
 namespace Templater;
 
-public static class InlineFilterFormat {
+static class InlineFilterFormat {
     public static bool FormatValue(JsonElement jsonValue, ReadOnlySpan<char> filter, out string result) {
         var valueByteLength = jsonValue.GetByteLength();
         using var buffer = ArrayPool<char>.Shared.RentStruct(valueByteLength);

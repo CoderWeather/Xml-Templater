@@ -1,6 +1,6 @@
 namespace Templater;
 
-public sealed class TemplateFormatException : Exception {
+sealed class TemplateFormatException : Exception {
     public TemplateFormatException() : base("Invalid template.") {
     }
 

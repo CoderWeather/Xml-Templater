@@ -3,11 +3,11 @@ using System.Runtime.CompilerServices;
 
 namespace Templater.Core;
 
-public static class ArrayPoolExtensions {
+static class ArrayPoolExtensions {
     public static PooledArrayOwnerStruct<T> RentStruct<T>(this ArrayPool<T> pool, int length) where T : struct => new(length, pool);
 }
 
-public struct PooledArrayOwnerStruct<T> : IDisposable where T : struct {
+struct PooledArrayOwnerStruct<T> : IDisposable where T : struct {
     readonly ArrayPool<T> pool;
     readonly int length;
     T[]? array;

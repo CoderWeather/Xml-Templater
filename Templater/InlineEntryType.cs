@@ -1,6 +1,6 @@
 namespace Templater;
 
-public enum InlineEntryType {
+enum InlineEntryType {
     EndOfFile = -1,
     Undefined = 0,
     FromObject = 1,

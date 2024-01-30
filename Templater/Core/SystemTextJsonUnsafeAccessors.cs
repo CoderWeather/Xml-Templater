@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace Templater.Core;
 
-public static class SystemTextJsonUnsafeAccessors {
+static class SystemTextJsonUnsafeAccessors {
     static SystemTextJsonUnsafeAccessors() {
         var jsonReaderHelperType = Type.GetType("System.Text.Json.JsonReaderHelper, System.Text.Json") ??
                                    throw new Exception("JsonReaderHelper type not found.");

@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace Templater;
 
-public static partial class ParseHelper {
+static partial class ParseHelper {
     // copied from (System.MemoryExtensions.EnumerateLines)MemoryExtensions.cs -> (MoveNext)SpanLineEnumerator.cs -> String.SearchValuesStorage.NewLineChars
     internal static readonly SearchValues<char> NewLineChars = SearchValues.Create("\r\f\u0085\u2028\u2029\n");
 
